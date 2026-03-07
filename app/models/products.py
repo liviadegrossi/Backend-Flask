@@ -1,9 +1,12 @@
 from pydantic import BaseModel
 from typing import Optional # attributes can be optional
 
-# Guarantees a product has all mandatory data
 class Product(BaseModel):
-    name: str # mandatory
-    price: float # mandatory
+    '''
+    Data model for a product. Name, price and stock are mandatory attibutes
+    '''
+    name: str 
+    price: float 
     description: Optional[str] = None
-    stock: int # mandatory
+    stock: int 
+    sku: str # Stock Keeping Unit

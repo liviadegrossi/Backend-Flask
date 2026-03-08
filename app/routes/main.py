@@ -1,35 +1,43 @@
 # Blueprint organizes all the routes
 # jsonify converts dictionaries into JSON
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from pydantic import ValidationError # to validate our models using pydantic
 from app.models.user import LoginPayload
 from app.models.products import *
 from app import db
 from bson import ObjectId
+from app.decorators import token_required
+from datetime import datetime, timedelta, timezone
+import jwt
 
 main_bp = Blueprint('main_bp', __name__)
 
-# RF: O sistema deve permitir que um usuário se autentique para obter um token
-# HTTP POST METHOD
+# checks user's credentials and returns a token
 @main_bp.route('/login', methods=['POST'])
-def login():
+def login(): 
+    # reads user's credentials and validates against the model in the Payload class
     try:
         raw_data = request.get_json() # reads the body (JSON) and returns a dictionary
         # the ** operator transforms the dictionary (raw_data) into data for the attributes (uncouple)
-        user_login = LoginPayload(**raw_data).model_dump()
-
+        user_login = LoginPayload(**raw_data)
     except ValidationError as error:
         return jsonify({'error': error.errors()}), 400 # http status_code
     except Exception as e: # for any other inconsistency
-        return jsonify({'error': 'Error in the request'}), 500
+        return jsonify({'error': f'Error in the request: {e}'}), 500
     
-    if user_login['username'] == 'admin' and user_login['password'] == '12345':
-        return jsonify({'message': 'Login successful!'})
-    else:
-        return jsonify({'message': 'Wrong username or password'})
+    # whether user's credentials are the expected ones, generates a token, and returns it
+    if user_login.username == 'admin' and user_login.password == '12345':
+        token = jwt.encode(
+            {
+                "user_id": user_login.username,
+                "exp": datetime.now(timezone.utc) + timedelta(minutes=30) # each token is valid for 30 minutes
+            },
+            str(current_app.config['SECRET_KEY']),
+            algorithm='HS256'
+        )
+        return jsonify({'access_token': token}), 200
     
-    # model_dump_json transforms the dictionary back to a json
-    # return jsonify({'message': f'Route to login the user {user_login.model_dump_json()}'})
+    return jsonify({'message': 'Wrong username or password'}), 401
 
 # RF: O sistema deve permitir listagem de todos os produtos
 # HTTP GET METHOD (default)

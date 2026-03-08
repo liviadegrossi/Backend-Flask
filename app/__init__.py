@@ -7,7 +7,7 @@ db = None
 # application factory (contains the application settings)
 def create_app():
     app = Flask(__name__)
-    app.register_blueprint(category_bp)
+    # app.register_blueprint(category_bp)
     app.config.from_object('config.Config') # from_object('file.class')
 
     global db # indicates we are changing the db variable and not creating another one

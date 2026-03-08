@@ -39,8 +39,7 @@ def login():
     
     return jsonify({'message': 'Wrong username or password'}), 401
 
-# RF: O sistema deve permitir listagem de todos os produtos
-# HTTP GET METHOD (default)
+# lists all products
 @main_bp.route('/products')
 def get_products():
     products_cursor = db.products.find({}) # retrieve all products in the database
@@ -54,9 +53,17 @@ def get_products():
     # return jsonify({'message': 'Route to list all products'})
 
 # RF: O sistema deve permitir a criação de um novo produto
+@token_required
 @main_bp.route('/products', methods=['POST'])
 def create_products():
-    return jsonify({'message': 'Route to create a product'})
+    try:
+        product = Product(**request.get_json())
+    except ValidationError as error:
+        return jsonify({'error': error.errors()})
+    
+    create_product_result = db.products.insert_one(product.model_dump())
+
+    return jsonify({'message': f'Product created successfully with id: {str(create_product_result.inserted_id)}'}), 201 # status_code 201 = created
 
 # RF: O sistema deve permitir a visualização dos detalhes de um produto
 @main_bp.route('/product/<string:product_id>')

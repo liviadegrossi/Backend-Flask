@@ -3,6 +3,8 @@
 from flask import Blueprint, jsonify, request
 from pydantic import ValidationError # to validate our models using pydantic
 from app.models.user import LoginPayload
+from app import db
+from bson import ObjectId
 
 main_bp = Blueprint('main_bp', __name__)
 
@@ -20,7 +22,7 @@ def login():
     except Exception as e: # for any other inconsistency
         return jsonify({'error': 'Error in the request'}), 500
     
-    if user_login['username'] == 'admin' and user_login['password'] == '12345':
+    if user_login.username == 'admin' and user_login.password == '12345':
         return jsonify({'message': 'Login successful!'})
     else:
         return jsonify({'message': 'Wrong username or password'})
@@ -32,7 +34,15 @@ def login():
 # HTTP GET METHOD (default)
 @main_bp.route('/products')
 def get_products():
-    return jsonify({'message': 'Route to list all products'})
+    products_cursor = db.products.find({}) # retrieve all products in the database
+    products_list = []
+
+    for product in products_cursor:
+        product['_id'] = str(product['_id']) # converts the product['_id'] into string
+        products_list.append(product)
+
+    return jsonify(products_list)
+    # return jsonify({'message': 'Route to list all products'})
 
 # RF: O sistema deve permitir a criação de um novo produto
 @main_bp.route('/products', methods=['POST'])
@@ -40,9 +50,21 @@ def create_products():
     return jsonify({'message': 'Route to create a product'})
 
 # RF: O sistema deve permitir a visualização dos detalhes de um produto
-@main_bp.route('/product/<int:product_id>')
+@main_bp.route('/product/<string:product_id>')
 def get_product_by_id(product_id):
-    return jsonify({'message': 'Route to list the details of the product'})
+
+    try:
+        oid = ObjectId(product_id)
+    except Exception as error:
+        return jsonify({'error': f'Error while converting the {product_id} into ObjectId: {error}'})
+
+    product = db.products.find_one({'_id': oid})
+    
+    if product:
+        product['_id'] = str(product['_id'])
+        return jsonify(product)
+    else:
+        return jsonify({'error': f'Product {product_id} not found'})
 
 # RF: O sistema deve permitir a atualização de um único produto e produto existente
 @main_bp.route('/product/<int:product_id>', methods=['PUT'])

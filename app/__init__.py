@@ -1,15 +1,12 @@
-# application factory (contains the application settings)
 from flask import Flask
-from .routes.main import main_bp
-from .routes.category_routes import category_bp
 from pymongo import MongoClient
+from .routes.category_routes import category_bp
 
 db = None
 
+# application factory (contains the application settings)
 def create_app():
     app = Flask(__name__)
-    # register the blueprint as the main_bp object
-    app.register_blueprint(main_bp)
     app.register_blueprint(category_bp)
     app.config.from_object('config.Config') # from_object('file.class')
 
@@ -22,4 +19,9 @@ def create_app():
     except Exception as error:
         print(f'Error while connecting to the database: {error}')
 
+    # import the blueprints in the factory and not in the module
+    from .routes.main import main_bp
+    
+    app.register_blueprint(main_bp) # register the blueprint as the main_bp object
+ 
     return app

@@ -1,12 +1,31 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional # attributes can be optional
+from bson import ObjectId
 
 class Product(BaseModel):
     '''
     Data model for a product. Name, price and stock are mandatory attibutes
     '''
+    id: Optional[ObjectId] = Field(None, alias='_id')
     name: str 
     price: float 
     description: Optional[str] = None
     stock: int 
-    sku: str # Stock Keeping Unit
+    sku: Optional[str] = None # Stock Keeping Unit
+
+    model_config = ConfigDict(
+        populate_by_name = True,
+        arbitrary_types_allowed = True
+    )
+
+# Reads the data from the database and converts them into JSON
+# Facilitates the sharing of lists in the JSON format
+class ProductDBModel(Product):
+    def model_dump(self, *, mode = 'python', include = None, exclude = None, context = None, by_alias = None, exclude_unset = False, exclude_defaults = False, exclude_none = False, exclude_computed_fields = False, round_trip = False, warnings = True, fallback = None, serialize_as_any = False):
+        data = super().model_dump(mode=mode, include=include, exclude=exclude, context=context, by_alias=by_alias, exclude_unset=exclude_unset, exclude_defaults=exclude_defaults, exclude_none=exclude_none, exclude_computed_fields=exclude_computed_fields, round_trip=round_trip, warnings=warnings, fallback=fallback, serialize_as_any=serialize_as_any)
+
+        # converts the id into a string
+        if self.id:
+            data['_id'] = str(data['_id'])
+        
+        return data

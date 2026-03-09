@@ -13,7 +13,7 @@ user_bp = Blueprint('user_bp', __name__)
 def get_users():
 
     # retrieve all users in the database
-    users_cursor = db.users.find({})
+    users_cursor = db.users.find({}, {"password": 0}) # doesn't include the password attribute
 
     # for each user, converts it from a dictionary into a json
     users_list = [UserDBModel(**user).model_dump(by_alias=True, exclude_none=True) for user in users_cursor]

@@ -122,7 +122,7 @@ def delete_product_by_id(product_id):
     if delete_result.deleted_count == 0:
         return jsonify({'error': 'Poduct not found'}), 404
 
-    return jsonify({'message': 'Product deleted'}), 204
+    return '', 204
 
 # RF: O sistema deve permitir a importação de vendas através de um arquivo
 @main_bp.route('/sales/upload', methods=['POST'])

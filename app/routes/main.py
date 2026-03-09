@@ -105,10 +105,24 @@ def update_product_by_id(product_id):
     update_product = db.products.find_one({"_id": oid})  # returns a dictionary
     return jsonify(ProductDBModel(**update_product).model_dump(by_alias=True, exclude=None)) # converts the dict into a JSON before returning it
 
-# RF: O sistema deve permitir a exclusão de um único produto e produto existente
-@main_bp.route('/product/<int:product_id>', methods=['DELETE'])
+# Delete a product using its id
+@token_required
+@main_bp.route('/product/<string:product_id>', methods=['DELETE'])
 def delete_product_by_id(product_id):
-    return jsonify({'message': 'Route to delte the product'})
+
+    # validates the data received in the request
+    try:
+        oid = ObjectId(product_id)
+    except ValidationError as error:
+        return jsonify({'error': 'Invalid product id'}), 400
+    
+    delete_result = db.products.delete_one({'_id': oid})
+
+    # checks if the product was deleted
+    if delete_result.deleted_count == 0:
+        return jsonify({'error': 'Poduct not found'}), 404
+
+    return jsonify({'message': 'Product deleted'}), 204
 
 # RF: O sistema deve permitir a importação de vendas através de um arquivo
 @main_bp.route('/sales/upload', methods=['POST'])

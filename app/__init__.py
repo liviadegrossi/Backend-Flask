@@ -21,7 +21,9 @@ def create_app():
 
     # import the blueprints in the factory and not in the module
     from .routes.main import main_bp
+    from .routes.user_routes import user_bp
     
-    app.register_blueprint(main_bp) # register the blueprint as the main_bp object
- 
+    app.register_blueprint(main_bp) # register the main blueprint as the main_bp object
+    app.register_blueprint(user_bp) # register the user blueprint as the user_bp object
+
     return app

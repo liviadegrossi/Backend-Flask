@@ -29,3 +29,9 @@ class ProductDBModel(Product):
             data['_id'] = str(data['_id'])
         
         return data
+
+class UpdateProduct(BaseModel):
+    name: Optional[str] = None
+    price: Optional[float] = None
+    description: Optional[str] = None
+    stock: Optional[int] = None

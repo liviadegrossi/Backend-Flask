@@ -50,7 +50,6 @@ def get_products():
     #     products_list.append(product)
 
     return jsonify(products_list)
-    # return jsonify({'message': 'Route to list all products'})
 
 # RF: O sistema deve permitir a criação de um novo produto
 @token_required
@@ -82,10 +81,29 @@ def get_product_by_id(product_id):
     else:
         return jsonify({'error': f'Product {product_id} not found'})
 
-# RF: O sistema deve permitir a atualização de um único produto e produto existente
-@main_bp.route('/product/<int:product_id>', methods=['PUT'])
+# Update a product using its id
+@token_required
+@main_bp.route('/product/<string:product_id>', methods=['PUT'])
 def update_product_by_id(product_id):
-    return jsonify({'message': 'Route to update the details of the product'})
+    
+    # validates the data received in the request
+    try:
+        oid = ObjectId(product_id)
+        update_data = UpdateProduct(**request.get_json())
+    except ValidationError as error:
+        return jsonify({'error': error.errors()})
+    
+    update_result = db.products.update_one(
+        {"_id": oid},
+        {"$set": update_data.model_dump(exclude_unset=True)}
+    )
+
+    # checks if the data was updated
+    if update_result.matched_count == 0:
+        return jsonify({"error": "Product not found"}), 404
+    
+    update_product = db.products.find_one({"_id": oid})  # returns a dictionary
+    return jsonify(ProductDBModel(**update_product).model_dump(by_alias=True, exclude=None)) # converts the dict into a JSON before returning it
 
 # RF: O sistema deve permitir a exclusão de um único produto e produto existente
 @main_bp.route('/product/<int:product_id>', methods=['DELETE'])

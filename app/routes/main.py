@@ -4,11 +4,15 @@ from flask import Blueprint, jsonify, request, current_app
 from pydantic import ValidationError # to validate our models using pydantic
 from app.models.user import LoginPayload
 from app.models.products import *
+from app.models.sale import Sale
 from app import db
 from bson import ObjectId
 from app.decorators import token_required
 from datetime import datetime, timedelta, timezone
 import jwt
+import csv
+import os
+import io
 
 main_bp = Blueprint('main_bp', __name__)
 
@@ -125,9 +129,52 @@ def delete_product_by_id(product_id):
     return '', 204
 
 # RF: O sistema deve permitir a importação de vendas através de um arquivo
+@token_required
 @main_bp.route('/sales/upload', methods=['POST'])
 def upload_sales():
-    return jsonify({'message': 'Route to upload the sales'})
+
+    # verify whether there is a file in the request
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file'}), 400
+
+    file = request.files['file']
+
+    # verify whether there is a selected file
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    # verify whether the file exists and is csv
+    if file and file.filename.endswith('.csv'):
+        csv_stream = io.StringIO(file.stream.read().decode('UTF-8'), newline=None)
+        csv_reader = csv.DictReader(csv_stream)
+
+        sale_to_insert = []
+        errors_list = []
+
+        # read each line in the CSV, validate it, and add to the list to be inserted
+        for row_number, row in enumerate(csv_reader, 1): # exclude the csv header
+            try:
+                sale_data = Sale(**row)
+                sale_to_insert.append(sale_data.model_dump())
+            except ValidationError as error:
+                errors_list.append(f'Error in line {row_number}, invalid data')
+            except Exception:
+                errors_list.append(f'Error in line {row_number}, an unexpected error occurred')
+        
+        # check whether there is a sale to be inserted
+        if sale_to_insert: 
+            try:
+                db.sales.insert_many(sale_to_insert)
+            except Exception as e:
+                return jsonify({'error': f'Error while inserting the sales in the database: {e}'})
+        
+        return jsonify({
+            "message": 'Sales uploaded successfully',
+            "uploaded sales": len(sale_to_insert),
+            "error": errors_list
+        }), 200
+
+    # return jsonify({'message': 'Route to upload the sales'})
 
 @main_bp.route('/')
 def index():
